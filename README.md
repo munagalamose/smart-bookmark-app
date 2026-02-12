@@ -141,6 +141,11 @@ Make sure to add these in your deployment platform:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+# smart-bookmark-app
+
+## Author
+Munagala Mose
+
 ## Contributing
 
 1. Fork the repository
@@ -152,6 +157,3 @@ Make sure to add these in your deployment platform:
 ## License
 
 MIT License - feel free to use this project for personal or commercial purposes.
-=======
-# smart-bookmark-app
->>>>>>> 77f6a4298cd789f347f5a1d8f300e3337ef6c4cb
