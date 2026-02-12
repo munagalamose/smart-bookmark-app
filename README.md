@@ -2,6 +2,8 @@
 
 A simple bookmark manager with real-time synchronization built with Next.js, Supabase, and Tailwind CSS.
 
+Live Demo: https://smart-bookmark-app-eta.vercel.app/
+
 ## Features
 
 - **Google OAuth Authentication**: Sign in using your Google account (no email/password required)
