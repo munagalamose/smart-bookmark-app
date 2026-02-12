@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [newBookmark, setNewBookmark] = useState({ title: '', url: '' })
   const [loadingBookmarks, setLoadingBookmarks] = useState(true)
+  const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected')
 
   useEffect(() => {
     if (!user && !loading) {
@@ -29,6 +30,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (user) {
       fetchBookmarks()
+      setRealtimeStatus('connecting')
       
       // Set up real-time subscription
       const subscription = supabase
@@ -42,8 +44,15 @@ export default function Dashboard() {
             filter: `user_id=eq.${user.id}`,
           },
           (payload) => {
+            console.log('Real-time update received:', payload)
             if (payload.eventType === 'INSERT') {
-              setBookmarks(prev => [payload.new as Bookmark, ...prev])
+              setBookmarks(prev => {
+                // Remove any temporary bookmark with same title, then add the real one
+                const filtered = prev.filter(b => 
+                  !b.id.startsWith('temp-') || b.title !== payload.new.title
+                )
+                return [payload.new as Bookmark, ...filtered]
+              })
             } else if (payload.eventType === 'DELETE') {
               setBookmarks(prev => prev.filter(b => b.id !== payload.old.id))
             } else if (payload.eventType === 'UPDATE') {
@@ -53,9 +62,18 @@ export default function Dashboard() {
             }
           }
         )
-        .subscribe()
+        .subscribe((status) => {
+          console.log('Subscription status:', status)
+          if (status === 'SUBSCRIBED') {
+            setRealtimeStatus('connected')
+          } else if (status === 'CLOSED') {
+            setRealtimeStatus('disconnected')
+          }
+        })
 
       return () => {
+        console.log('Cleaning up subscription')
+        setRealtimeStatus('disconnected')
         subscription.unsubscribe()
       }
     }
@@ -82,22 +100,44 @@ export default function Dashboard() {
     e.preventDefault()
     if (!user || !newBookmark.title || !newBookmark.url) return
 
-    const { error } = await supabase
+    // Optimistic update - add to UI immediately
+    const tempBookmark: Bookmark = {
+      id: `temp-${Date.now()}`, // Temporary ID
+      title: newBookmark.title,
+      url: newBookmark.url,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    
+    setBookmarks(prev => [tempBookmark, ...prev])
+    setNewBookmark({ title: '', url: '' })
+
+    const { data, error } = await supabase
       .from('bookmarks')
       .insert({
         user_id: user.id,
         title: newBookmark.title,
         url: newBookmark.url,
       })
+      .select()
+      .single()
 
     if (error) {
       console.error('Error adding bookmark:', error)
+      // Remove the temporary bookmark if insert failed
+      setBookmarks(prev => prev.filter(b => b.id !== tempBookmark.id))
     } else {
-      setNewBookmark({ title: '', url: '' })
+      // Replace temporary bookmark with real one
+      setBookmarks(prev => 
+        prev.map(b => b.id === tempBookmark.id ? data : b)
+      )
     }
   }
 
   const deleteBookmark = async (id: string) => {
+    // Optimistic update - remove from UI immediately
+    setBookmarks(prev => prev.filter(b => b.id !== id))
+    
     const { error } = await supabase
       .from('bookmarks')
       .delete()
@@ -105,7 +145,10 @@ export default function Dashboard() {
 
     if (error) {
       console.error('Error deleting bookmark:', error)
+      // If delete failed, add the bookmark back
+      fetchBookmarks()
     }
+    // If successful, the real-time subscription will handle the update
   }
 
   if (loading) {
@@ -128,7 +171,19 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto py-8 px-4">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Bookmarks</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl font-bold text-gray-900">My Bookmarks</h1>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${
+                realtimeStatus === 'connected' ? 'bg-green-500' : 
+                realtimeStatus === 'connecting' ? 'bg-yellow-500' : 'bg-red-500'
+              }`} />
+              <span className="text-sm text-gray-600">
+                {realtimeStatus === 'connected' ? 'Real-time sync active' : 
+                 realtimeStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+              </span>
+            </div>
+          </div>
           <button
             onClick={signOut}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"

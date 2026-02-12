@@ -1,20 +1,20 @@
-import { createClient } from '@supabase/supabase-js'
-import { redirect } from 'next/navigation'
+'use client'
 
-export default async function AuthCallback() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser()
+export default function AuthCallback() {
+  const router = useRouter()
 
-  if (error || !user) {
-    redirect('/error')
-  }
+  useEffect(() => {
+    const handleAuth = async () => {
+      await supabase.auth.getSession()
+      router.push('/dashboard')
+    }
 
-  redirect('/dashboard')
+    handleAuth()
+  }, [router])
+
+  return <p>Signing you in...</p>
 }
