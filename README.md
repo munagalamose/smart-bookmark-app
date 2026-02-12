@@ -152,3 +152,6 @@ Make sure to add these in your deployment platform:
 ## License
 
 MIT License - feel free to use this project for personal or commercial purposes.
+=======
+# smart-bookmark-app
+>>>>>>> 77f6a4298cd789f347f5a1d8f300e3337ef6c4cb
