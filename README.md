@@ -141,7 +141,7 @@ Make sure to add these in your deployment platform:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-# smart-bookmark-app
+
 
 ## Author
 Munagala Mose
